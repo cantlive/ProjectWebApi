@@ -7,17 +7,18 @@ namespace ProjectWebApi
 {
     public static class WebApiConfig
     {
+        public static string UrlPrefixRelative => "~/api";
+
         public static void Register(HttpConfiguration config)
         {
             config.Filters.Add(new WebApiExceptionFilterAttribute());
             config.MapHttpAttributeRoutes();
 
-            config.Routes.MapHttpRoute(
+            var route = config.Routes.MapHttpRoute(
                 name: "DefaultApi",
                 routeTemplate: "api/{controller}/{action}/{id}",
                 defaults: new { id = RouteParameter.Optional }
             );
-
 
             var cors = new EnableCorsAttribute("*", "*", "*");
             config.EnableCors(cors);
