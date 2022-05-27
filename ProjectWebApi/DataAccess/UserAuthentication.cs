@@ -38,6 +38,7 @@ namespace ProjectWebApi.DataAccess
             {
                 BIZApplicationInitializer.RunInCurrentSession(() =>
                 {
+                    OrgPatternChanger.Instance.SetOrgPattern();
                     CurrentEmployee = Global.GetCurrentEmp();
                     CurrentLogin = username;
                     CurrentPassword = password;

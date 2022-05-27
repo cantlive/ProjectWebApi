@@ -38,7 +38,7 @@ namespace ProjectWebApi.Controllers
             return UserAuthentication.CurrentLogin;
         }
 
-        private void LogIn()
+        public void LogIn()
         {
             HttpContext httpContext = HttpContext.Current;
             string authHeader = httpContext.Request.Headers["Authorization"];
