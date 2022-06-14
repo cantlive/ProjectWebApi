@@ -33,16 +33,22 @@ namespace ProjectWebApi.Controllers
         }
 
         [HttpGet]
-        public string GetLogin()
+        public EmployeeResponse Login() 
         {
-            return UserAuthentication.CurrentLogin;
+            return LogIn();
         }
 
-        public void LogIn()
+        [HttpGet]
+        public EmployeeResponse GetLogin()
+        {
+            return UserAuthentication.GetCurrentUser();
+        }
+
+        private EmployeeResponse LogIn()
         {
             HttpContext httpContext = HttpContext.Current;
             string authHeader = httpContext.Request.Headers["Authorization"];
-            UserAuthentication.LogIn(authHeader);
+            return UserAuthentication.LogIn(authHeader);
         }
     }
 }

@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Text;
+using BIZ.Core.Common.Host.Modules.Facades;
 using BIZ.Core.Common.Script;
 using BIZ.ExternalIntegration.ASP.MVC;
 using BIZ.ExternalIntegration.Common;
 using ProjectWebApi.Attributes;
+using ProjectWebApi.Models;
 using ScriptLibrary;
 
 namespace ProjectWebApi.DataAccess
@@ -11,11 +13,7 @@ namespace ProjectWebApi.DataAccess
     [WebApiExceptionFilter]
     public static class UserAuthentication
     {
-        public static dcr_Employees CurrentEmployee { get; private set; }
-        public static string CurrentLogin { get; private set; }
-        public static string CurrentPassword { get; private set; }
-
-        public static void LogIn(string authHeader)
+        public static EmployeeResponse LogIn(string authHeader)
         {
             if (authHeader == null || authHeader.StartsWith("Basic") == false)
                 throw new ScriptException("You are not authorized");
@@ -29,24 +27,66 @@ namespace ProjectWebApi.DataAccess
             var username = usernamePassword.Substring(0, seperatorIndex);
             var password = usernamePassword.Substring(seperatorIndex + 1);
 
-            if (BIZApplicationInitializer.IsAuthenticated() && username == CurrentLogin && password == CurrentPassword)
-                return;
+            EmployeeResponse currentUser = GetCurrentUser();
+            bool validPassword = IsPasswordValid(username, password);
+            if (BIZApplicationInitializer.IsAuthenticated() && (username != currentUser.Name || validPassword == false))
+                BIZApplicationInitializer.RemoveLocalSession();
 
-            BIZApplicationInitializer.RemoveLocalSession();
-            var authInfo = BIZAuthInfo.Create(username, password, null);
+            if (username == currentUser.Name && validPassword)
+                return currentUser;
+
+            var authInfo = BIZAuthInfo.Create(username, password, null); 
             if (BIZApplicationInitializer.RegisterSession(authInfo))
             {
+                Guid uid = default;
+                string name = string.Empty;
+
                 BIZApplicationInitializer.RunInCurrentSession(() =>
                 {
                     OrgPatternChanger.Instance.SetOrgPattern();
-                    CurrentEmployee = Global.GetCurrentEmp();
-                    CurrentLogin = username;
-                    CurrentPassword = password;
-                });
-                return;
-            }
+                    dcr_Employees employee = Global.GetCurrentEmp();
 
-            throw new ScriptException("You are not authorized");
+                    if (employee != null)
+                    {
+                        uid = employee.UID;
+                        name = employee.Name;
+                    }                   
+                });
+
+                return new EmployeeResponse { UID = uid, Name = name };
+            }
+            else
+            {
+                BIZApplicationInitializer.RemoveLocalSession();
+                throw new ScriptException("You are not authorized");
+            }
+        }
+
+        public static EmployeeResponse GetCurrentUser() 
+        {
+            Guid uid = default;
+            string name = string.Empty;
+
+            BIZApplicationInitializer.RunInCurrentSession(() =>
+            {
+                dcr_Employees employee = Global.GetCurrentEmp();
+
+                if (employee != null)
+                {
+                    uid = employee.UID;
+                    name = employee.Name;
+                }
+            });
+
+            return new EmployeeResponse { UID = uid, Name = name };
+        }
+
+        private static bool IsPasswordValid(string username, string password) 
+        {
+            return BIZApplicationInitializer.RunInCurrentSession(() =>
+            {
+                return DataStorageClass.Current.SecurityProvider.ValidateUser(username, password);
+            });
         }
     }
 }
